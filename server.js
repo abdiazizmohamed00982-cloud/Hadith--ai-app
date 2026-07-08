@@ -1,38 +1,28 @@
 const express = require('express');
 const cors = require('cors');
-const { OpenAI } = require('openai');
-require('dotenv').config();
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const app = express();
-
-// CORS configuration
 app.use(cors());
 app.use(express.json());
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Koodhkani wuxuu si ammaan ah u akhrisanayaa furahaaga Render
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 app.post('/api/chat', async (req, res) => {
     try {
         const { message, language } = req.body;
-        
-        const completion = await openai.chat.completions.create({
-            model: "gpt-3.5-turbo",
-            messages: [
-                { role: "system", content: `You are Jarvis. Respond strictly in ${language}.` },
-                { role: "user", content: message }
-            ],
-        });
-        const chatResponse = completion.choices[0].message.content;
+        // Waxaan isticmaalaynaa gemini-1.5-flash oo ah mid dhakhso badan oo bilaash ah
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-        const mp3 = await openai.audio.speech.create({
-            model: "tts-1",
-            voice: "onyx",
-            input: chatResponse,
-        });
-        
-        const buffer = Buffer.from(await mp3.arrayBuffer());
-        res.json({ reply: chatResponse, audio: buffer.toString('base64') });
+        const prompt = `You are Jarvis. Respond strictly in ${language}. User says: ${message}`;
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text();
+
+        res.json({ reply: text });
     } catch (error) {
+        console.error("Error:", error);
         res.status(500).json({ error: error.message });
     }
 });
