@@ -1,39 +1,42 @@
-const express = require('express');
-const { OpenAI } = require('openai');
-require('dotenv').config();
+<!DOCTYPE html>
+<html>
+<body>
+    <h2>Jarvis Hadith AI</h2>
+    
+    <!-- Language Selector -->
+    <label for="languageSelect">Choose Language:</label>
+    <select id="languageSelect">
+        <option value="English">English</option>
+        <option value="Swedish">Swedish</option>
+        <option value="Arabic">Arabic</option>
+    </select>
 
-const app = express();
-app.use(express.json());
+    <br><br>
+    <input type="text" id="userInput" placeholder="Ask anything..." style="width: 300px;">
+    <button onclick="askJarvis()">Ask</button>
+    <p id="response">Response will appear here...</p>
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-});
+    <script>
+        async function askJarvis() {
+            const msg = document.getElementById('userInput').value;
+            const lang = document.getElementById('languageSelect').value;
+            const resDisplay = document.getElementById('response');
+            
+            resDisplay.innerText = "Jarvis is thinking...";
 
-app.post('/api/chat', async (req, res) => {
-    try {
-        const { message } = req.body;
-        
-        // 1. Hel jawaabta qoraalka ah
-        const completion = await openai.chat.completions.create({
-            model: "gpt-3.5-turbo",
-            messages: [{ role: "user", content: message }],
-        });
-        const chatResponse = completion.choices[0].message.content;
-
-        // 2. U beddel cod (Text-to-Speech)
-        const mp3 = await openai.audio.speech.create({
-            model: "tts-1",
-            voice: "onyx",
-            input: chatResponse,
-        });
-        const buffer = Buffer.from(await mp3.arrayBuffer());
-        const audioBase64 = buffer.toString('base64');
-
-        // 3. U dir jawaabta iyo codka
-        res.json({ reply: chatResponse, audio: audioBase64 });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.listen(3000, () => console.log('Server running on port 3000'));
+            const response = await fetch('https://hadith-ai-app.onrender.com/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: msg, language: lang })
+            });
+            
+            const data = await response.json();
+            resDisplay.innerText = "Response: " + data.reply;
+            
+            // Play audio
+            const audio = new Audio("data:audio/mp3;base64," + data.audio);
+            audio.play();
+        }
+    </script>
+</body>
+</html>
